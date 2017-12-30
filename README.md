@@ -24,7 +24,7 @@ flopbear is written in [Rust](https://github.com/rust-lang/rust) and uses the [C
 git clone https://github.com/tickelton/flopbear
 cd flopbear
 cargo build --release
-./target/release/flopbear eth0
+cargo run eth0
 ```
 
 ## License
