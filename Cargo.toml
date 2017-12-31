@@ -5,3 +5,5 @@ authors = ["tickelton <tickelton@gmail.com>"]
 
 [dependencies]
 clap = "2.29.0"
+log = "0.4.1"
+env_logger = "0.4.3"
