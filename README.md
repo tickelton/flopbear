@@ -10,9 +10,10 @@ An example scenario is embedded development for an evaluation board that can onl
 
 ## Getting started
 
-flopbear can simply be started from the command line. The only required argument is the name of the interface to listen on. A suitable address range is determined automatically.
+flopbear can simply be started from the command line. The only required argument is the name of a configured network interface to listen on. Addresses in the range configured on the given interface will automatically be offered to all DHCP clients.
 
 ```shell
+$ ifconfig eth0 192.168.5.1 netmask 255.255.255.0 up
 $ ./flopbear eth0
 ```
 
