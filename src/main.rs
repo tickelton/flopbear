@@ -2,6 +2,7 @@ extern crate clap;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
+extern crate get_if_addrs;
 
 use clap::{Arg, App};
 
@@ -20,7 +21,14 @@ fn main() {
                              .required(true)
                              .index(1))
                         .get_matches();
-    let iface = matches.value_of("INTERFACE").unwrap();
-    debug!("Using interface: {}", iface);
+    let if_name = matches.value_of("INTERFACE").unwrap();
+    debug!("Using interface: {}", if_name);
+
+	let interfaces = match get_if_addrs::get_if_addrs() {
+		Ok(i) => i,
+		Err(e) => { eprintln!("Error: {}", e); std::vec::Vec::new() } ,
+	};
+	println!("interfaces = {:?}", interfaces);
+
 }
 
