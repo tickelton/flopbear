@@ -26,7 +26,7 @@ impl Config {
         let if_name = matches.value_of("INTERFACE").unwrap();
         debug!("Config: using interface: {}", if_name);
 
-        let interfaces: Option<get_if_addrs::Ifv4Addr> = match get_if_addrs::get_if_addrs() {
+        let interfaces = match get_if_addrs::get_if_addrs() {
             Ok(i) => {
                 match i.iter()
                         .filter(|iface| { iface.name == if_name})
