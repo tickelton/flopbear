@@ -28,30 +28,30 @@ impl Config {
 
         let interfaces = match get_if_addrs::get_if_addrs() {
             Ok(i) => {
-                match i.iter()
-                        .filter(|iface| { iface.name == if_name})
-                        .filter(|iface2| {
-                            match iface2.addr {
+                if let Some(x) = i.iter()
+                        .filter(|iface| {
+                            iface.name == if_name
+                            && match iface.addr {
                                 V4(_) => true,
                                 _ => false
-                                }
-                            })
-                        .next() {
+                            }
+                        }).next() {
 
-                    Some(x) => match x.addr.clone() {
-                        V4(y) => Some(y),
-                        _ => None,
-                    },
-                    None => None
+                    match x.addr.clone() {
+                        V4(y) => Ok(y),
+                        _ => Err("No V4 address found"),
+                    }
+                } else {
+                    Err("Interface not found")
                 }
             },
-            Err(e) => { eprintln!("Error: {}", e); None } ,
+            Err(_) => Err("Error listing interfaces"),
         };
         debug!("Config: interfaces = {:?}", interfaces);
 
         match interfaces {
-            Some(addr) => Ok(Config { addr }),
-            None => Err("Error: interface not found"),
+            Ok(addr) => Ok(Config { addr }),
+            Err(e) => Err(e),
         }
     }
 }
