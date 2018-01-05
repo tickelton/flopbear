@@ -24,12 +24,20 @@ $ ./flopbear eth0
 ### Dependencies
 
 **TODO: fill in as the emerge.**
+* GNU Make
 
 ### Compiling
 
-flopbear is written in C and compiles to a single, statically linked binary. It can simply be build by calling make:
+flopbear is written in C and compiles to a single, statically linked binary. It can simply be build by calling GNU make:
+
+Linux:
 ```shell
 make
+```
+
+OpenBSD:
+```shell
+gmake
 ```
 
 ## License
