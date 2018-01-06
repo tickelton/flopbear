@@ -15,7 +15,7 @@ debug: $(OBJS)
 release: CFLAGS = $(CFLAGS_RELEASE)
 release: $(OBJS)
 
-flopbear: src/main.c
+flopbear: src/main.c src/flopbear.h
 	@[ -d $(BUILDDIR) ] || mkdir $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $(BUILDDIR)/flopbear $(SRCDIR)/main.c
 
