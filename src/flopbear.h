@@ -10,20 +10,20 @@ const char *argp_program_bug_address =
 "<tickelton@gmail.com>";
 
 struct arguments {
-    char *ifname;
+	char   *ifname;
 };
-char args_doc[] = "INTERFACE";
-char doc[] =
+char 	args_doc[] = "INTERFACE";
+char 	doc[] =
 "flopbear -- A configurtion-less DHCP server";
-error_t parse_opt (int key, char *arg, struct argp_state *state);
+error_t parse_opt(int key, char *arg, struct argp_state * state);
 struct argp argp = {0, parse_opt, args_doc, doc};
 
-// flopbear internals
+//flopbear internals
 typedef struct _flopbear_config_s {
-    uint8_t incremental_leases;
-    char *if_name;
-    struct sockaddr *if_addr;
-    struct sockaddr *start_addr;
-} fb_config_s;
+	uint8_t incremental_leases;
+	char   *if_name;
+	struct sockaddr *if_addr;
+	struct sockaddr *start_addr;
+} 	fb_config_s;
 
 #endif
