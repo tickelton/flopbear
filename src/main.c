@@ -1,5 +1,10 @@
+#define _BSD_SOURCE
+#include <err.h>
 #include <ifaddrs.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "flopbear.h"
 
 /* getifaddrs + getnameinfo */
@@ -8,28 +13,23 @@
 #include <netdb.h>
 #include <string.h>
 
+extern char *optarg;
+extern int optind;
 
-error_t
-parse_opt(int key, char *arg, struct argp_state * state)
+static const char const *version = "0.1.0";
+static const char const *progname = "flopbear";
+static const char const *progdesc =
+"A configuration-less DHCP server.";
+
+static void
+usage(const int ret)
 {
-	struct arguments *arguments = state->input;
-
-	switch (key) {
-	case ARGP_KEY_ARG:
-		if (state->arg_num >= 1) {
-			argp_usage(state);
-		}
-		arguments->ifname = arg;
-		break;
-	case ARGP_KEY_END:
-		if (state->arg_num < 1) {
-			argp_usage(state);
-		}
-		break;
-	default:
-		return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
+	fprintf(stderr, "Usage: %s [-hV] IF\n%s\n\n"
+		"-h\tGive this help message\n"
+		"-V\tPrint program version\n\n"
+		"IF is the name of the interface to listen on.\n",
+		progname, progdesc);
+	exit(ret);
 }
 
 int
@@ -37,15 +37,30 @@ main(int argc, char **argv)
 {
 	struct ifaddrs *ifaddr;
 	struct arguments arguments;
+	int 	ch;
 
-	if (argp_parse(&argp, argc, argv, 0, 0, &arguments)) {
-		/*
-		 * TODO: this should never happen. argp_parse exits
-	         *       on error. Could be handled better.
-		 */
-		fprintf(stderr, "Error parsing arguments\n");
-		return 1;
+	while ((ch = getopt(argc, argv, "hV")) != -1) {
+		switch (ch) {
+		case 'h':
+			usage(0);
+			break;
+		case 'V':
+			printf("%s %s\n", progname, version);
+			exit(0);
+			break;
+		default:
+			usage(1);
+		}
 	}
+	argc -= optind;
+	argv += optind;
+	if (argc != 1) {
+		fprintf(stderr, "Error: Missing required argument IF.\n\n");
+		usage(1);
+	}
+	if ((arguments.ifname = strdup(argv[0])) == NULL)
+		err(1, NULL);
+
 	printf("ifname=%s\n", arguments.ifname);
 
 	if (getifaddrs(&ifaddr) == -1) {

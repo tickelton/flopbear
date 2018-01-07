@@ -1,5 +1,5 @@
-CFLAGS_DEBUG = -g -Wall -O0
-CFLAGS_RELEASE = -Wall -O3
+CFLAGS_DEBUG = -std=c99 -g -Wall -O0
+CFLAGS_RELEASE = -std=c99 -Wall -O3
 
 OBJS = flopbear
 CC = gcc
