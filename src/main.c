@@ -15,18 +15,18 @@ parse_opt(int key, char *arg, struct argp_state * state)
 	struct arguments *arguments = state->input;
 
 	switch (key) {
-	  case ARGP_KEY_ARG:
+	case ARGP_KEY_ARG:
 		if (state->arg_num >= 1) {
 			argp_usage(state);
 		}
 		arguments->ifname = arg;
 		break;
-	  case ARGP_KEY_END:
+	case ARGP_KEY_END:
 		if (state->arg_num < 1) {
 			argp_usage(state);
 		}
 		break;
-	  default:
+	default:
 		return ARGP_ERR_UNKNOWN;
 	}
 	return 0;

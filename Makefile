@@ -21,3 +21,6 @@ flopbear: src/main.c src/flopbear.h
 
 clean:
 	rm -rf $(BUILDDIR)/*
+
+indent:
+	@indent -di8 $(FILE)
