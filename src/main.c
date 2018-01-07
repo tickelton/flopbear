@@ -21,6 +21,15 @@ static const char const *progname = "flopbear";
 static const char const *progdesc =
 "A configuration-less DHCP server.";
 
+static struct arguments arguments;
+
+#define INFO(args...) if (arguments.verbosity >= V_INFO) \
+	fprintf(stderr, args)
+#define DEBUG(args...) if (arguments.verbosity >= V_DEBUG) \
+	fprintf(stderr, args)
+#define TRACE(args...) if (arguments.verbosity >= V_TRACE) \
+	fprintf(stderr, args)
+
 static void
 usage(const int ret)
 {
@@ -35,11 +44,11 @@ usage(const int ret)
 }
 
 static void
-parse_opts(int *argc, char **argv, struct arguments * arguments)
+parse_opts(int *argc, char **argv)
 {
 	int 	ch;
 
-	arguments->verbosity = V_DEFAULT;
+	arguments.verbosity = V_DEFAULT;
 	while ((ch = getopt(*argc, argv, "hVv")) != -1) {
 		switch (ch) {
 		case 'h':
@@ -50,8 +59,8 @@ parse_opts(int *argc, char **argv, struct arguments * arguments)
 			exit(0);
 			break;
 		case 'v':
-			if (arguments->verbosity < 3)
-				arguments->verbosity++;
+			if (arguments.verbosity < 3)
+				arguments.verbosity++;
 			break;
 		default:
 			usage(1);
@@ -63,7 +72,7 @@ parse_opts(int *argc, char **argv, struct arguments * arguments)
 		fprintf(stderr, "Error: Missing required argument IF.\n\n");
 		usage(1);
 	}
-	if ((arguments->ifname = strdup(argv[0])) == NULL)
+	if ((arguments.ifname = strdup(argv[0])) == NULL)
 		err(1, NULL);
 }
 
@@ -71,14 +80,12 @@ int
 main(int argc, char **argv)
 {
 	struct ifaddrs *ifaddr;
-	struct arguments arguments;
 
-	parse_opts(&argc, argv, &arguments);
-	printf("ifname=%s\n", arguments.ifname);
+	parse_opts(&argc, argv);
+	INFO("Using interface %s\n", arguments.ifname);
 
 	if (getifaddrs(&ifaddr) == -1) {
-		perror("getifaddrs");
-		return 1;
+		err(1, "getifaddrs");
 	}
 	for (struct ifaddrs * ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		int 	family;
@@ -99,12 +106,10 @@ main(int argc, char **argv)
 					NULL, 0, NI_NUMERICHOST
 				);
 			if (s != 0) {
-				printf("getnameinfo() failed: %s\n",
-				       gai_strerror(s));
-				return 1;
+				errx(1, "getnameinfo() failed: %s\n",
+				     gai_strerror(s));
 			}
-			printf("paddr='%s'\n", ipaddr);
-
+			INFO("Got address %s\n", ipaddr);
 		}
 	}
 

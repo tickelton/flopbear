@@ -3,10 +3,10 @@
 #include <stdint.h>
 
 enum _verbosity {
-	V_DEFAULT=0,
-	V_DEBUG=1,
-	V_DEBUG2=2,
-	V_TRACE=3,
+	V_DEFAULT = 0,
+	V_INFO = 1,
+	V_DEBUG = 2,
+	V_TRACE = 3,
 };
 
 struct arguments {
