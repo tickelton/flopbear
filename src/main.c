@@ -24,9 +24,11 @@ static const char const *progdesc =
 static void
 usage(const int ret)
 {
-	fprintf(stderr, "Usage: %s [-hV] IF\n%s\n\n"
+	fprintf(stderr, "Usage: %s [-hVv] IF\n%s\n\n"
 		"-h\tGive this help message\n"
-		"-V\tPrint program version\n\n"
+		"-V\tPrint program version\n"
+		"-v\tIncrease output verbosity\n"
+		"\tcan be given up to three times\n\n"
 		"IF is the name of the interface to listen on.\n",
 		progname, progdesc);
 	exit(ret);
@@ -37,7 +39,8 @@ parse_opts(int *argc, char **argv, struct arguments * arguments)
 {
 	int 	ch;
 
-	while ((ch = getopt(*argc, argv, "hV")) != -1) {
+	arguments->verbosity = V_DEFAULT;
+	while ((ch = getopt(*argc, argv, "hVv")) != -1) {
 		switch (ch) {
 		case 'h':
 			usage(0);
@@ -45,6 +48,10 @@ parse_opts(int *argc, char **argv, struct arguments * arguments)
 		case 'V':
 			printf("%s %s\n", progname, version);
 			exit(0);
+			break;
+		case 'v':
+			if (arguments->verbosity < 3)
+				arguments->verbosity++;
 			break;
 		default:
 			usage(1);

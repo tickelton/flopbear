@@ -2,8 +2,16 @@
 #define __FLOPBEAR_H__
 #include <stdint.h>
 
+enum _verbosity {
+	V_DEFAULT=0,
+	V_DEBUG=1,
+	V_DEBUG2=2,
+	V_TRACE=3,
+};
+
 struct arguments {
 	char   *ifname;
+	enum _verbosity verbosity;
 };
 
 //flopbear internals
