@@ -32,14 +32,12 @@ usage(const int ret)
 	exit(ret);
 }
 
-int
-main(int argc, char **argv)
+static void
+parse_opts(int *argc, char **argv, struct arguments * arguments)
 {
-	struct ifaddrs *ifaddr;
-	struct arguments arguments;
 	int 	ch;
 
-	while ((ch = getopt(argc, argv, "hV")) != -1) {
+	while ((ch = getopt(*argc, argv, "hV")) != -1) {
 		switch (ch) {
 		case 'h':
 			usage(0);
@@ -52,15 +50,23 @@ main(int argc, char **argv)
 			usage(1);
 		}
 	}
-	argc -= optind;
+	*argc -= optind;
 	argv += optind;
-	if (argc != 1) {
+	if (*argc != 1) {
 		fprintf(stderr, "Error: Missing required argument IF.\n\n");
 		usage(1);
 	}
-	if ((arguments.ifname = strdup(argv[0])) == NULL)
+	if ((arguments->ifname = strdup(argv[0])) == NULL)
 		err(1, NULL);
+}
 
+int
+main(int argc, char **argv)
+{
+	struct ifaddrs *ifaddr;
+	struct arguments arguments;
+
+	parse_opts(&argc, argv, &arguments);
 	printf("ifname=%s\n", arguments.ifname);
 
 	if (getifaddrs(&ifaddr) == -1) {
