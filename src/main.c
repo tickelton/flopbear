@@ -23,12 +23,12 @@ static const char const *progdesc =
 
 static struct arguments arguments;
 
-#define INFO(args...) if (arguments.verbosity >= V_INFO) \
-	fprintf(stderr, args)
-#define DEBUG(args...) if (arguments.verbosity >= V_DEBUG) \
-	fprintf(stderr, args)
-#define TRACE(args...) if (arguments.verbosity >= V_TRACE) \
-	fprintf(stderr, args)
+#define INFO(...) if (arguments.verbosity >= V_INFO) \
+	fprintf(stderr, __VA_ARGS__)
+#define DEBUG(...) if (arguments.verbosity >= V_DEBUG) \
+	fprintf(stderr, __VA_ARGS__)
+#define TRACE(...) if (arguments.verbosity >= V_TRACE) \
+	fprintf(stderr, __VA_ARGS__)
 
 static void
 usage(const int ret)
