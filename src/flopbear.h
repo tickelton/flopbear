@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2018 tick <tickelton@gmail.com>
+ * 
+ * SPDX-License-Identifier:	ISC
+ */
+
 #ifndef __FLOPBEAR_H__
 #define __FLOPBEAR_H__
 #include <stdint.h>

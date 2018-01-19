@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2018 tick <tickelton@gmail.com>
+ * 
+ * SPDX-License-Identifier:	ISC
+ */
+
 #define _BSD_SOURCE
 #include <err.h>
 #include <ifaddrs.h>
