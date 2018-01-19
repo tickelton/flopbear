@@ -12,7 +12,7 @@ For now flopbear is targeting only Linux and OpenBSD.
 
 ## Getting started
 
-flopbear can simply be started from the command line. The only required argument is the name of a configured network interface to listen on. Addresses in the range configured on the given interface will automatically be assigned to all DHCP clients. flopbear will assume that all addresses higher than that of the listening interface (or lower if its address is at the end of the range) are free to be used and will assign them in ascending order.
+flopbear can simply be started from the command line. The only required argument is the name of a configured network interface to listen on. Addresses in the range configured on the given interface will automatically be assigned to all DHCP clients. flopbear will assume that all addresses higher than that of the listening interface are free to be used and will assign them in ascending order.
 
 ```shell
 $ ifconfig eth0 192.168.5.1 netmask 255.255.255.0 up
@@ -23,7 +23,7 @@ $ ./flopbear eth0
 
 ### Dependencies
 
-**TODO: fill in as the emerge.**
+**TODO: fill in as they emerge.**
 * GNU Make
 
 ### Compiling
