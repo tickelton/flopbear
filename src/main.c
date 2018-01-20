@@ -13,11 +13,6 @@
 #include <unistd.h>
 #include "flopbear.h"
 
-/* getifaddrs + getnameinfo */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <string.h>
 
 extern char *optarg;
 extern int optind;
@@ -82,13 +77,9 @@ parse_opts(int *argc, char **argv)
 		err(1, NULL);
 }
 
-int
-main(int argc, char **argv)
+void get_config(struct fb_config *config, const struct arguments const *args)
 {
-	struct ifaddrs *ifaddr;
-
-	parse_opts(&argc, argv);
-	INFO("Using interface %s\n", arguments.ifname);
+	struct ifaddrs		*ifaddr;
 
 	if (getifaddrs(&ifaddr) == -1) {
 		err(1, "getifaddrs");
@@ -102,24 +93,36 @@ main(int argc, char **argv)
 		family = ifa->ifa_addr->sa_family;
 		if (family == AF_INET &&
 		    !strcmp(ifa->ifa_name, arguments.ifname)) {
-			char 	ipaddr[NI_MAXHOST];
-			int 	s;
-
-			s = getnameinfo(
-					ifa->ifa_addr,
-					sizeof(struct sockaddr_in),
-					ipaddr, sizeof(ipaddr),
-					NULL, 0, NI_NUMERICHOST
-				);
-			if (s != 0) {
-				errx(1, "getnameinfo() failed: %s\n",
-				     gai_strerror(s));
-			}
-			INFO("Got address %s\n", ipaddr);
+union fb_in_addr fooo;
+			memcpy(&config->if_addr,
+				((struct sockaddr_in *)ifa->ifa_addr),
+				sizeof(struct sockaddr_in));
+fooo.addr = config->if_addr.sin_addr.s_addr;
+printf("addr=%d.%d.%d.%d\n", fooo.s_addr.b1,fooo.s_addr.b2,fooo.s_addr.b3,fooo.s_addr.b4);
+			break;
 		}
 	}
 
+
+	config->if_name = strdup(arguments.ifname);
+
 	freeifaddrs(ifaddr);
+}
+
+int
+main(int argc, char **argv)
+{
+	struct fb_config	config;
+
+	parse_opts(&argc, argv);
+	INFO("Using interface %s\n", arguments.ifname);
+
+	get_config(&config, &arguments);
+	DEBUG("Got config:\n"
+	      " if_name=%s\n"
+	      " if_addr=...\n"
+	      " start_addr=...\n",
+	      config.if_name);
 
 	return 0;
 }

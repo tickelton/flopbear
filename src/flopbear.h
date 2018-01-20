@@ -7,6 +7,10 @@
 #ifndef __FLOPBEAR_H__
 #define __FLOPBEAR_H__
 #include <stdint.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <string.h>
 
 enum _verbosity {
 	V_DEFAULT = 0,
@@ -21,11 +25,19 @@ struct arguments {
 };
 
 //flopbear internals
-typedef struct _flopbear_config_s {
-	uint8_t incremental_leases;
+struct fb_config {
 	char   *if_name;
-	struct sockaddr *if_addr;
-	struct sockaddr *start_addr;
-} 	fb_config_s;
+	struct sockaddr_in if_addr;
+	struct sockaddr_in clt_addr;
+};
+
+struct fb_in_addr_s {
+	uint8_t b1, b2, b3, b4;
+};
+
+union fb_in_addr {
+	struct fb_in_addr_s s_addr;
+	uint32_t addr;
+};
 
 #endif
