@@ -93,12 +93,16 @@ void get_config(struct fb_config *config, const struct arguments const *args)
 		family = ifa->ifa_addr->sa_family;
 		if (family == AF_INET &&
 		    !strcmp(ifa->ifa_name, arguments.ifname)) {
-union fb_in_addr fooo;
+			union fb_in_addr tmp_addr;
+
 			memcpy(&config->if_addr,
 				((struct sockaddr_in *)ifa->ifa_addr),
 				sizeof(struct sockaddr_in));
-fooo.addr = config->if_addr.sin_addr.s_addr;
-printf("addr=%d.%d.%d.%d\n", fooo.s_addr.b1,fooo.s_addr.b2,fooo.s_addr.b3,fooo.s_addr.b4);
+
+			tmp_addr.addr = config->if_addr.sin_addr.s_addr;
+			tmp_addr.s_addr.b4++;
+			config->clt_addr.sin_addr.s_addr = tmp_addr.addr;
+
 			break;
 		}
 	}
@@ -120,9 +124,11 @@ main(int argc, char **argv)
 	get_config(&config, &arguments);
 	DEBUG("Got config:\n"
 	      " if_name=%s\n"
-	      " if_addr=...\n"
-	      " start_addr=...\n",
-	      config.if_name);
+	      " if_addr=%X\n"
+	      " clt_addr=%X\n",
+	      config.if_name,
+	      config.if_addr.sin_addr.s_addr,
+	      config.clt_addr.sin_addr.s_addr);
 
 	return 0;
 }
