@@ -152,10 +152,12 @@ int do_listen(struct fb_config *config)
 int
 main(int argc, char **argv)
 {
+	int n;
 	int sock = -1;
 	int pollret;
 	struct pollfd fds[1];
 	struct fb_config	config;
+	struct dhcp_msg		msg; 
 
 	parse_opts(&argc, argv);
 	INFO("Using interface %s\n", arguments.ifname);
@@ -187,6 +189,29 @@ main(int argc, char **argv)
 			continue;
 		}
 
+		memset(&msg, 0, sizeof(msg));
+
+		n = read(sock, &msg, sizeof(msg));
+		if (n < 0) {
+			warn("read");
+			continue;
+		}
+
+		TRACE("got package\n");
+
+		if (msg.options[0] == MESSAGE_TYPE) {
+			TRACE("got message type %x\n", msg.options[2]);
+		}
+
+		switch (msg.options[2]) {
+
+		case DHCPDISCOVER:
+			TRACE("DHCPDISCOVER\n");
+			break;
+		case DHCPREQUEST:
+			TRACE("DHCPREQUEST\n");
+			break;
+		}
 	}
 
 	return 0;
