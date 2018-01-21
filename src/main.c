@@ -6,11 +6,15 @@
 
 #define _BSD_SOURCE
 #include <err.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <ifaddrs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <poll.h>
 #include <unistd.h>
+#include <linux/if.h>
 #include "flopbear.h"
 
 
@@ -81,6 +85,9 @@ void get_config(struct fb_config *config, const struct arguments const *args)
 {
 	struct ifaddrs		*ifaddr;
 
+	memset(&config->if_addr, 0, sizeof(struct sockaddr_in));
+	memset(&config->clt_addr, 0, sizeof(struct sockaddr_in));
+
 	if (getifaddrs(&ifaddr) == -1) {
 		err(1, "getifaddrs");
 	}
@@ -113,9 +120,39 @@ void get_config(struct fb_config *config, const struct arguments const *args)
 	freeifaddrs(ifaddr);
 }
 
+int do_listen(struct fb_config *config)
+{
+	int fd;
+	const int one = 1;
+
+	fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (fd < 0) {
+		perror("socket");
+		return -1;
+	}
+
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int))) {
+		perror("setsockopt SO_REUSEADDR");
+		return -1;
+	}
+	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &one, sizeof(int))) {
+		perror("setsockopt SO_BROADCAST");
+		return -1;
+	}
+
+	config->if_addr.sin_family = AF_INET;
+	config->if_addr.sin_port = htons(SERVER_PORT);
+	bind(fd, (struct sockaddr *)&config->if_addr, sizeof(config->if_addr));
+
+	return fd;
+}
+
 int
 main(int argc, char **argv)
 {
+	int sock = -1;
+	int pollret;
+	struct pollfd fds[1];
 	struct fb_config	config;
 
 	parse_opts(&argc, argv);
@@ -129,6 +166,26 @@ main(int argc, char **argv)
 	      config.if_name,
 	      config.if_addr.sin_addr.s_addr,
 	      config.clt_addr.sin_addr.s_addr);
+
+	for (;;) {
+		if (sock < 0) {
+			sock = do_listen(&config);
+		}
+		if (sock < 0)
+			err(1, "do_listen");
+
+
+		fcntl(sock, F_SETFD, FD_CLOEXEC);
+		fds[0].fd = sock;
+		fds[0].events = POLLIN;
+
+		pollret = poll(fds, 1, -1);
+		if(pollret < 1) {
+			warn("poll");
+			continue;
+		}
+
+	}
 
 	return 0;
 }

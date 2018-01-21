@@ -12,6 +12,8 @@
 #include <netdb.h>
 #include <string.h>
 
+#define SERVER_PORT	67
+
 enum _verbosity {
 	V_DEFAULT = 0,
 	V_INFO = 1,
@@ -39,5 +41,24 @@ union fb_in_addr {
 	struct fb_in_addr_s s_addr;
 	uint32_t addr;
 };
+
+struct dhcp_msg {
+	uint8_t op;
+	uint8_t htype;
+	uint8_t hlen;
+	uint8_t hops;
+	uint32_t xid;
+	uint16_t secs;
+	uint16_t flags;
+	uint32_t ciaddr;
+	uint32_t yiaddr;
+	uint32_t siaddr;
+	uint32_t gatewayp;
+	uint8_t chaddr[16];
+	uint8_t sname[64];
+	uint8_t file[128];
+	uint32_t cookie;
+	uint8_t options[312];
+} __attribute__((packed));
 
 #endif
