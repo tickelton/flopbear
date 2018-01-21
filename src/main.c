@@ -110,6 +110,7 @@ void get_config(struct fb_config *config, const struct arguments const *args)
 			tmp_addr.s_addr.b4++;
 			config->clt_addr.sin_addr.s_addr = tmp_addr.addr;
 
+			config->if_addr.sin_addr.s_addr = 0xFFFFFFFF;
 			break;
 		}
 	}
@@ -139,6 +140,7 @@ int do_listen(struct fb_config *config)
 		perror("setsockopt SO_BROADCAST");
 		return -1;
 	}
+	setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, arguments.ifname, strlen(arguments.ifname));
 
 	config->if_addr.sin_family = AF_INET;
 	config->if_addr.sin_port = htons(SERVER_PORT);
