@@ -14,6 +14,7 @@
 #include <string.h>
 #include <poll.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <linux/if.h>
 #include "flopbear.h"
 
@@ -149,6 +150,32 @@ int do_listen(struct fb_config *config)
 	return fd;
 }
 
+void send_dhcpoffer(struct dhcp_msg *discover, struct fb_config *config)
+{
+	struct dhcp_msg	offer;
+
+	memset(&offer, 0, sizeof(offer));
+	offer.op = BOOTREPLY;
+	offer.htype = 1;
+	offer.hlen = 6;
+	offer.cookie = htonl(DHCP_MAGIC);
+
+	offer.xid = discover->xid;
+	memcpy(&offer.chaddr, discover->chaddr, sizeof(discover->chaddr));
+	offer.flags = discover->flags;
+	offer.gatewayip = discover->gatewayip;
+	offer.ciaddr = discover->ciaddr;
+
+	offer.options[0] = DHCP_MESSAGE_TYPE;
+	offer.options[1] = 1;
+	offer.options[2] = DHCPOFFER;
+	offer.options[3] = DHCP_SERVER_ID;
+	offer.options[4] = 4;
+	*(uint32_t *)(&offer.options[5]) = config->clt_addr.sin_addr.s_addr-1;
+	offer.options[9] = DHCP_END;
+
+}
+
 int
 main(int argc, char **argv)
 {
@@ -207,6 +234,7 @@ main(int argc, char **argv)
 
 		case DHCPDISCOVER:
 			TRACE("DHCPDISCOVER\n");
+			send_dhcpoffer(&msg, &config);
 			break;
 		case DHCPREQUEST:
 			TRACE("DHCPREQUEST\n");

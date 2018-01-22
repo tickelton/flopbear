@@ -22,6 +22,11 @@
 #define DHCPNAK		6
 #define DHCPRELEASE	7
 #define DHCPINFORM	8
+#define BOOTREPLY	2
+#define DHCP_MAGIC	0x63825363
+#define DHCP_END	0xff
+#define DHCP_MESSAGE_TYPE	0x35
+#define DHCP_SERVER_ID		0x36
 
 enum _verbosity {
 	V_DEFAULT = 0,
@@ -62,7 +67,7 @@ struct dhcp_msg {
 	uint32_t ciaddr;
 	uint32_t yiaddr;
 	uint32_t siaddr;
-	uint32_t gatewayp;
+	uint32_t gatewayip;
 	uint8_t chaddr[16];
 	uint8_t sname[64];
 	uint8_t file[128];
