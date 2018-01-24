@@ -40,6 +40,10 @@ OpenBSD:
 gmake
 ```
 
+## Acknowledgements
+
+flopbear is partially based on [Fritz Grimpen's](https://user.math.uni-bremen.de/~grimpen/) [dhcpd](https://github.com/fritz0705/dhcpd). 
+
 ## License
 
 flopbear is distributed under the terms of the ISC license.

@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,27 @@
 #include <arpa/inet.h>
 #include <linux/if.h>
 #include "flopbear.h"
+#include "dhcp.h"
+#include "config.h"
 
+#ifndef RECV_BUF_LEN
+#define RECV_BUF_LEN 4096
+#endif
+
+#ifndef SEND_BUF_LEN
+#define SEND_BUF_LEN 4096
+#endif
+
+#define MAC_ADDRSTRLEN 18
+
+struct sockaddr_in server_id;
+struct sockaddr_in broadcast = {
+	.sin_family = AF_INET,
+	.sin_addr = {INADDR_BROADCAST},
+};
+
+uint8_t recv_buffer[RECV_BUF_LEN];
+uint8_t send_buffer[SEND_BUF_LEN];
 
 extern char *optarg;
 extern int optind;
@@ -29,12 +50,134 @@ static const char const *progdesc =
 
 static struct arguments arguments;
 
+uint8_t debug = 0;
+
+struct fb_config	config;
+
 #define INFO(...) if (arguments.verbosity >= V_INFO) \
 	fprintf(stderr, __VA_ARGS__)
 #define DEBUG(...) if (arguments.verbosity >= V_DEBUG) \
 	fprintf(stderr, __VA_ARGS__)
 #define TRACE(...) if (arguments.verbosity >= V_TRACE) \
 	fprintf(stderr, __VA_ARGS__)
+
+static const char BROKEN_SOFTWARE_NOTIFICATION[] = 
+"#################################### ALERT ####################################\n"
+"  BROKEN SOFTWARE NOTIFICATION - SOMETHING SENDS INVALID DHCP MESSAGES IN YOUR\n"
+"                                    NETWORK\n";
+
+static inline void dhcpd_error(int _exit, int _errno, const char *fmt, ...)
+{
+
+	va_list ap;
+	va_start(ap, fmt);
+
+	if (_errno != 0)
+		fprintf(stderr, "%s: ", strerror(_errno));
+
+	vfprintf(stderr, fmt, ap);
+	fputc('\n', stderr);
+
+	if (_exit > 0)
+		exit(_exit);
+}
+
+static int mac_ntop(char *addr, char *dst, size_t s)
+{
+	return snprintf(dst, s,
+		"%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX", 
+		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+}
+
+void dhcp_msg_dump(FILE *stream, struct dhcp_msg *msg)
+{
+	fprintf(stream,
+		"DHCP message:\n"
+		"\tOP %hhu [%s]\n"
+		"\tHTYPE %hhu HLEN %hhu\n"
+		"\tHOPS %hhu\n"
+		"\tXID %8X\n"
+		"\tSECS %hu FLAGS %hu\n"
+		"\tCIADDR %s YIADDR %s SIADDR %s GIADDR %s\n"
+		"\tCHADDR %s\n"
+		"\tMAGIC %8X\n"
+		"\tMSG TYPE %s\n",
+		*DHCP_MSG_F_OP(msg->data),
+		(*DHCP_MSG_F_OP(msg->data) == 1 ? "REQUEST" : "REPLY"),
+		*DHCP_MSG_F_HTYPE(msg->data),
+		*DHCP_MSG_F_HLEN(msg->data),
+		*DHCP_MSG_F_HOPS(msg->data),
+		ntohl(*DHCP_MSG_F_XID(msg->data)),
+		ntohs(*DHCP_MSG_F_SECS(msg->data)),
+		ntohs(*DHCP_MSG_F_FLAGS(msg->data)),
+		msg->ciaddr, msg->yiaddr, msg->siaddr, msg->giaddr,
+		msg->chaddr,
+		*(uint32_t*)DHCP_MSG_F_MAGIC(msg->data),
+		(msg->type == DHCPDISCOVER ? "DHCPDISCOVER" :
+		 msg->type == DHCPOFFER ? "DHCPOFFER" :
+		 msg->type == DHCPREQUEST ? "DHCPREQUEST" :
+		 msg->type == DHCPDECLINE ? "DHCPDECLINE" :
+		 msg->type == DHCPACK ? "DHCPACK" :
+		 msg->type == DHCPNAK ? "DHCPNAK" :
+		 msg->type == DHCPRELEASE ? "DHCPRELEASE" :
+		 msg->type == DHCPINFORM ? "DHCPINFORM" : "unknown"));
+
+	struct dhcp_opt cur_opt;
+	uint8_t *options = DHCP_MSG_F_OPTIONS(msg->data);
+
+	while (dhcp_opt_next(&options, &cur_opt, msg->end))
+	{
+		switch (cur_opt.code)
+		{
+			case DHCP_OPT_STUB:
+				fprintf(stream, "\tOPTION STUB\n");
+				break;
+			case DHCP_OPT_NETMASK:
+				fprintf(stream, "\tOPTION NETMASK %s\n",
+					inet_ntop(AF_INET, cur_opt.data,
+						(char[]){[INET_ADDRSTRLEN] = 0}, INET_ADDRSTRLEN));
+				break;
+			case DHCP_OPT_ROUTER:
+				fprintf(stream, "\tOPTION ROUTERS %u\n", cur_opt.len / 4);
+				for (off_t o = 0; o < cur_opt.len / 4; ++o)
+					fprintf(stream, "\t\t%s\n", inet_ntop(AF_INET, cur_opt.data+(o*4),
+							(char[]){[INET_ADDRSTRLEN] = 0}, INET_ADDRSTRLEN));
+				break;
+			case DHCP_OPT_DNS:
+				fprintf(stream, "\tOPTION DNS %u\n", cur_opt.len / 4);
+				for (off_t o = 0; o < cur_opt.len / 4; ++o)
+					fprintf(stream, "\t\t%s\n", inet_ntop(AF_INET, cur_opt.data+(o*4),
+							(char[]){[INET_ADDRSTRLEN] = 0}, INET_ADDRSTRLEN));
+				break;
+			case DHCP_OPT_LEASETIME:
+				fprintf(stream, "\tOPTION LEASETIME %u\n", *(uint32_t*)cur_opt.data);
+				break;
+			case DHCP_OPT_SERVERID:
+				fprintf(stream, "\tOPTION SERVERID %s\n",
+					inet_ntop(AF_INET, cur_opt.data,
+						(char[]){[INET_ADDRSTRLEN] = 0}, INET_ADDRSTRLEN));
+				break;
+			case DHCP_OPT_REQIPADDR:
+				fprintf(stream, "\tOPTION REQIPADDR %s\n",
+					inet_ntop(AF_INET, cur_opt.data,
+						(char[]){[INET_ADDRSTRLEN] = 0}, INET_ADDRSTRLEN));
+				break;
+			default:
+				fprintf(stream, "\tOPTION %02hhX(%hhu)\n", cur_opt.code, cur_opt.len);
+				break;
+		}
+	}
+}
+
+static void msg_debug(struct dhcp_msg *msg, int dir)
+{
+	if (dir == 0)
+		fprintf(stderr, "--- INCOMING ---\n");
+	else if (dir == 1)
+		fprintf(stderr, "--- OUTGOING ---\n");
+
+	dhcp_msg_dump(stderr, msg);
+}
 
 static void
 usage(const int ret)
@@ -110,8 +253,6 @@ void get_config(struct fb_config *config, const struct arguments const *args)
 			tmp_addr.addr = config->if_addr.sin_addr.s_addr;
 			tmp_addr.s_addr.b4++;
 			config->clt_addr.sin_addr.s_addr = tmp_addr.addr;
-
-			config->if_addr.sin_addr.s_addr = 0xFFFFFFFF;
 			break;
 		}
 	}
@@ -126,6 +267,11 @@ int do_listen(struct fb_config *config)
 {
 	int fd;
 	const int one = 1;
+	struct sockaddr_in bind_addr = {
+		.sin_family = AF_INET,
+		.sin_port = htons(67),
+		.sin_addr = {INADDR_ANY}
+	};
 
 	fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (fd < 0) {
@@ -145,46 +291,222 @@ int do_listen(struct fb_config *config)
 
 	config->if_addr.sin_family = AF_INET;
 	config->if_addr.sin_port = htons(SERVER_PORT);
-	bind(fd, (struct sockaddr *)&config->if_addr, sizeof(config->if_addr));
+	bind(fd, (struct sockaddr *)&bind_addr, sizeof(struct sockaddr));
 
 	return fd;
 }
 
-void send_dhcpoffer(struct dhcp_msg *discover, struct fb_config *config)
+static uint32_t netmask_from_prefixlen(uint8_t prefixlen)
 {
-	struct dhcp_msg	offer;
+	return htonl(0xFFFFFFFFU - (1 << (32 - prefixlen)) + 1);
+}
 
-	memset(&offer, 0, sizeof(offer));
-	offer.op = BOOTREPLY;
-	offer.htype = 1;
-	offer.hlen = 6;
-	offer.cookie = htonl(DHCP_MAGIC);
+uint8_t *dhcp_opt_add_lease(uint8_t *options, size_t *_send_len, struct dhcp_lease *lease)
+{
+	size_t send_len = 0;
 
-	offer.xid = discover->xid;
-	memcpy(&offer.chaddr, discover->chaddr, sizeof(discover->chaddr));
-	offer.flags = discover->flags;
-	offer.gatewayip = discover->gatewayip;
-	offer.ciaddr = discover->ciaddr;
+	if (lease->prefixlen > 0)
+	{
+		options[0] = DHCP_OPT_NETMASK;
+		options[1] = 4;
+		ARRAY_COPY((options + 2), (uint8_t*)((uint32_t[]){netmask_from_prefixlen(lease->prefixlen)}), 4);
+		DHCP_OPT_CONT(options, send_len);
+	}
 
-	offer.options[0] = DHCP_MESSAGE_TYPE;
-	offer.options[1] = 1;
-	offer.options[2] = DHCPOFFER;
-	offer.options[3] = DHCP_SERVER_ID;
-	offer.options[4] = 4;
-	*(uint32_t *)(&offer.options[5]) = config->clt_addr.sin_addr.s_addr-1;
-	offer.options[9] = DHCP_END;
+	if (lease->routers_cnt > 0)
+	{
+		options[0] = DHCP_OPT_ROUTER;
+		options[1] = lease->routers_cnt * 4;
+		for (size_t i = 0; i < lease->routers_cnt; ++i)
+			*(struct in_addr *)(options + 2 + (i * 4)) = lease->routers[i];
+		DHCP_OPT_CONT(options, send_len);
+	}
 
+	if (lease->leasetime > 0)
+	{
+		options[0] = DHCP_OPT_LEASETIME;
+		options[1] = 4;
+		*(uint32_t*)(options + 2) = htonl(lease->leasetime);
+		DHCP_OPT_CONT(options, send_len);
+	}
+
+	if (lease->nameservers_cnt > 0)
+	{
+		options[0] = DHCP_OPT_DNS;
+		options[1] = lease->nameservers_cnt * 4;
+		for (size_t i = 0; i < lease->nameservers_cnt; ++i)
+			*(struct in_addr *)(options + 2 + (i * 4)) = lease->nameservers[i];
+		DHCP_OPT_CONT(options, send_len);
+	}
+
+	if (_send_len != NULL)
+		*_send_len += send_len;
+
+	return options;
+}
+
+static void
+discover_cb(int sock, struct dhcp_msg *msg)
+{
+
+	struct dhcp_lease lease = DHCP_LEASE_EMPTY;
+
+
+#if 0
+	lease = (struct dhcp_lease){
+		.routers = cfg.routers,
+		.routers_cnt = cfg.routers_cnt,
+		.nameservers = cfg.nameservers,
+		.nameservers_cnt = cfg.nameservers_cnt,
+		.leasetime = cfg.leasetime,
+		.prefixlen = cfg.prefixlen
+	};
+#endif
+
+	lease.address.s_addr = htonl(config.clt_addr.sin_addr.s_addr);
+	char ip_str[INET_ADDRSTRLEN];
+
+	inet_ntop(AF_INET, &lease.address, ip_str, INET_ADDRSTRLEN);
+
+
+	size_t send_len;
+	uint8_t *options;
+	dhcp_msg_reply(send_buffer, &options, &send_len, msg, DHCPOFFER);
+
+	ARRAY_COPY(DHCP_MSG_F_YIADDR(send_buffer), &lease.address, 4);
+
+	options[0] = DHCP_OPT_SERVERID;
+	options[1] = 4;
+	ARRAY_COPY((options + 2), &msg->sid->sin_addr, 4);
+	DHCP_OPT_CONT(options, send_len);
+
+	options = dhcp_opt_add_lease(options, &send_len, &lease);
+
+	*options = DHCP_OPT_END;
+	DHCP_OPT_CONT(options, send_len);
+
+	if (debug)
+		msg_debug(&((struct dhcp_msg){.data = send_buffer, .length = send_len }), 1);
+	int err = sendto(sock,
+		send_buffer, send_len,
+		MSG_DONTWAIT, (struct sockaddr *)&broadcast, sizeof broadcast);
+
+	if (err < 0)
+		dhcpd_error(errno, 1, "Could not send DHCPOFFER");
+
+}
+
+static void
+req_cb(int sock)
+{
+	/* Initialize address struct passed to recvfrom */
+	struct sockaddr_in src_addr = {
+		.sin_addr = {INADDR_ANY}
+	};
+	socklen_t src_addrlen = AF_INET;
+
+	/* Receive data from socket */
+	ssize_t recvd = recvfrom(
+		sock,
+		recv_buffer,
+		RECV_BUF_LEN,
+		MSG_DONTWAIT,
+		(struct sockaddr * restrict)&src_addr, &src_addrlen);
+
+	/* Detect errors */
+	if (recvd < 0)
+		return;
+	/* Detect too small messages */
+	if (recvd < DHCP_MSG_HDRLEN)
+		return;
+	/* Check magic value */
+	uint8_t *magic = DHCP_MSG_F_MAGIC(recv_buffer);
+	if (!DHCP_MSG_MAGIC_CHECK(magic))
+		return;
+
+	/* Convert addresses to strings */
+	char ciaddr[INET_ADDRSTRLEN],
+			 yiaddr[INET_ADDRSTRLEN],
+			 siaddr[INET_ADDRSTRLEN],
+			 giaddr[INET_ADDRSTRLEN],
+			 chaddr[MAC_ADDRSTRLEN],
+			 srcaddr[INET_ADDRSTRLEN];
+
+	inet_ntop(AF_INET, DHCP_MSG_F_CIADDR(recv_buffer), ciaddr, sizeof ciaddr);
+	inet_ntop(AF_INET, DHCP_MSG_F_YIADDR(recv_buffer), yiaddr, sizeof yiaddr);
+	inet_ntop(AF_INET, DHCP_MSG_F_SIADDR(recv_buffer), siaddr, sizeof siaddr);
+	inet_ntop(AF_INET, DHCP_MSG_F_GIADDR(recv_buffer), giaddr, sizeof giaddr);
+	inet_ntop(AF_INET, &src_addr.sin_addr, srcaddr, sizeof srcaddr);
+	mac_ntop(DHCP_MSG_F_CHADDR(recv_buffer), chaddr, sizeof chaddr);
+
+	/* Extract message type from options */
+	uint8_t *options = DHCP_MSG_F_OPTIONS(recv_buffer);
+	struct dhcp_opt current_option;
+
+	enum dhcp_msg_type msg_type = 0;
+
+	while (dhcp_opt_next(&options, &current_option, (uint8_t*)(recv_buffer + recvd)))
+		if (current_option.code == 53)
+			msg_type = (enum dhcp_msg_type)current_option.data[0];
+
+	struct dhcp_msg msg = {
+		.data = recv_buffer,
+		.end = recv_buffer + recvd,
+		.length = recvd,
+		.type = msg_type,
+		.ciaddr = ciaddr,
+		.yiaddr = yiaddr,
+		.siaddr = siaddr,
+		.giaddr = giaddr,
+		.chaddr = chaddr,
+		.srcaddr = srcaddr,
+		.source = (struct sockaddr *)&src_addr,
+		.sid = (struct sockaddr_in *)&server_id
+	};
+
+	if (debug)
+		msg_debug(&msg, 0);
+
+	switch (msg_type)
+	{
+		case DHCPDISCOVER:
+			TRACE("DHCPDISCOVER\n");
+			discover_cb(sock, &msg);
+			break;
+
+		case DHCPREQUEST:
+			TRACE("DHCPREQUEST\n");
+			//request_cb(EV_A_ w, &msg);
+			break;
+
+		case DHCPRELEASE:
+			TRACE("DHCPRELEASE\n");
+			//release_cb(EV_A_ w, &msg);
+			break;
+
+		case DHCPDECLINE:
+			TRACE("DHCPDECLINE\n");
+			//decline_cb(EV_A_ w, &msg);
+			break;
+
+		case DHCPINFORM:
+			TRACE("DHCPINFORM\n");
+			//inform_cb(EV_A_ w, &msg);
+			break;
+
+		default:
+			fprintf(stderr, BROKEN_SOFTWARE_NOTIFICATION);
+			msg_debug(&msg, 0);
+			break;
+	}
 }
 
 int
 main(int argc, char **argv)
 {
-	int n;
 	int sock = -1;
 	int pollret;
 	struct pollfd fds[1];
-	struct fb_config	config;
-	struct dhcp_msg		msg; 
 
 	parse_opts(&argc, argv);
 	INFO("Using interface %s\n", arguments.ifname);
@@ -197,6 +519,8 @@ main(int argc, char **argv)
 	      config.if_name,
 	      config.if_addr.sin_addr.s_addr,
 	      config.clt_addr.sin_addr.s_addr);
+
+	broadcast.sin_port = htons(68);
 
 	for (;;) {
 		if (sock < 0) {
@@ -216,30 +540,8 @@ main(int argc, char **argv)
 			continue;
 		}
 
-		memset(&msg, 0, sizeof(msg));
+		req_cb(sock);
 
-		n = read(sock, &msg, sizeof(msg));
-		if (n < 0) {
-			warn("read");
-			continue;
-		}
-
-		TRACE("got package\n");
-
-		if (msg.options[0] == MESSAGE_TYPE) {
-			TRACE("got message type %x\n", msg.options[2]);
-		}
-
-		switch (msg.options[2]) {
-
-		case DHCPDISCOVER:
-			TRACE("DHCPDISCOVER\n");
-			send_dhcpoffer(&msg, &config);
-			break;
-		case DHCPREQUEST:
-			TRACE("DHCPREQUEST\n");
-			break;
-		}
 	}
 
 	return 0;
