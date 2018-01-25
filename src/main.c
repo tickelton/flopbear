@@ -363,7 +363,8 @@ discover_cb(int sock, struct dhcp_msg *msg)
 	};
 #endif
 
-	lease.address.s_addr = htonl(config.clt_addr.sin_addr.s_addr);
+	//lease.address.s_addr = htonl(config.clt_addr.sin_addr.s_addr);
+	lease.address.s_addr = config.clt_addr.sin_addr.s_addr;
 	char ip_str[INET_ADDRSTRLEN];
 
 	inet_ntop(AF_INET, &lease.address, ip_str, INET_ADDRSTRLEN);
@@ -394,6 +395,75 @@ discover_cb(int sock, struct dhcp_msg *msg)
 	if (err < 0)
 		dhcpd_error(errno, 1, "Could not send DHCPOFFER");
 
+}
+
+static void
+request_cb(int sock, struct dhcp_msg *msg)
+{
+	struct in_addr *requested_server;
+	uint8_t *options;
+	struct dhcp_opt current_opt;
+	struct dhcp_lease lease = DHCP_LEASE_EMPTY;
+
+	requested_server = (struct in_addr *)DHCP_MSG_F_SIADDR(msg->data);
+	options = DHCP_MSG_F_OPTIONS(msg->data);
+
+	while (dhcp_opt_next(&options, &current_opt, msg->end))
+		switch (current_opt.code)
+		{
+			case DHCP_OPT_REQIPADDR:
+				lease.address = *(struct in_addr *)current_opt.data;
+				break;
+			case DHCP_OPT_SERVERID:
+				requested_server = (struct in_addr *)current_opt.data;
+				break;
+		}
+
+	if (requested_server->s_addr != msg->sid->sin_addr.s_addr)
+		return;
+
+	int err;
+
+
+#if 0
+	lease = (struct dhcp_lease){
+		.address = *requested_addr,
+		.routers = cfg.routers,
+		.routers_cnt = cfg.routers_cnt,
+		.nameservers = cfg.nameservers,
+		.nameservers_cnt = cfg.nameservers_cnt,
+		.leasetime = cfg.leasetime,
+		.prefixlen = cfg.prefixlen
+	};
+#endif
+
+
+	size_t send_len;
+	dhcp_msg_reply(send_buffer, &options, &send_len, msg, DHCPACK);
+
+	ARRAY_COPY(DHCP_MSG_F_YIADDR(send_buffer), &lease.address, 4);
+
+	options[0] = DHCP_OPT_SERVERID;
+	options[1] = 4;
+	ARRAY_COPY((options + 2), &msg->sid->sin_addr, 4);
+	DHCP_OPT_CONT(options, send_len);
+
+	options = dhcp_opt_add_lease(options, &send_len, &lease);
+
+	*options = DHCP_OPT_END;
+	DHCP_OPT_CONT(options, send_len);
+
+	if (debug)
+		msg_debug(&((struct dhcp_msg){.data = send_buffer, .length = send_len }), 1);
+	err = sendto(sock,
+		send_buffer, send_len,
+		MSG_DONTWAIT, (struct sockaddr *)&broadcast, sizeof broadcast);
+
+	if (err < 0)
+		dhcpd_error(0, 1, "Could not send DHCPACK");
+
+
+	return;
 }
 
 static void
@@ -476,7 +546,7 @@ req_cb(int sock)
 
 		case DHCPREQUEST:
 			TRACE("DHCPREQUEST\n");
-			//request_cb(EV_A_ w, &msg);
+			request_cb(sock, &msg);
 			break;
 
 		case DHCPRELEASE:
