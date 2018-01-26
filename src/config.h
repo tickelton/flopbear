@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2013, Fritz Conrad Grimpen 
+ * 
+ * SPDX-License-Identifier:	BSD-2-Clause
+ */
+
 #pragma once
 
 #include <sys/socket.h>

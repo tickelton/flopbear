@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2013, Fritz Conrad Grimpen 
+ * 
+ * SPDX-License-Identifier:	BSD-2-Clause
+ */
+
 #pragma once
 
 #ifndef DHCPD_ARRAY_H_
