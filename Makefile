@@ -16,9 +16,17 @@ debug: $(OBJS)
 release: CFLAGS = $(CFLAGS_RELEASE)
 release: $(OBJS)
 
-flopbear: src/main.c src/flopbear.h
+$(BUILDDIR)/main.o: src/main.c src/flopbear.h
 	@[ -d $(BUILDDIR) ] || mkdir $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $(BUILDDIR)/flopbear $(SRCDIR)/main.c
+	$(CC) $(CFLAGS) -c -o $(BUILDDIR)/main.o $(SRCDIR)/main.c
+
+$(BUILDDIR)/libflopbear.o: src/libflopbear.c src/flopbear.h
+	@[ -d $(BUILDDIR) ] || mkdir $(BUILDDIR)
+	$(CC) $(CFLAGS) -c -o $(BUILDDIR)/libflopbear.o $(SRCDIR)/libflopbear.c
+
+flopbear: $(BUILDDIR)/libflopbear.o $(BUILDDIR)/main.o
+	@[ -d $(BUILDDIR) ] || mkdir $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $(BUILDDIR)/flopbear $(BUILDDIR)/libflopbear.o $(BUILDDIR)/main.o
 
 clean:
 	rm -rf $(BUILDDIR)/*

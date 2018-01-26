@@ -6,11 +6,34 @@
 
 #ifndef __FLOPBEAR_H__
 #define __FLOPBEAR_H__
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <ifaddrs.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <poll.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <linux/if.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-#include <string.h>
+#include "dhcp.h"
+#include "config.h"
+
+#ifndef RECV_BUF_LEN
+#define RECV_BUF_LEN 4096
+#endif
+
+#ifndef SEND_BUF_LEN
+#define SEND_BUF_LEN 4096
+#endif
+
+#define MAC_ADDRSTRLEN 18
 
 #define SERVER_PORT	67
 #define MESSAGE_TYPE	0x35
@@ -32,7 +55,6 @@ struct arguments {
 	enum _verbosity verbosity;
 };
 
-//flopbear internals
 struct fb_config {
 	char   *if_name;
 	struct sockaddr_in if_addr;
@@ -47,5 +69,36 @@ union fb_in_addr {
 	struct fb_in_addr_s s_addr;
 	uint32_t addr;
 };
+
+extern struct sockaddr_in server_id;
+extern struct sockaddr_in broadcast;
+
+extern uint8_t recv_buffer[RECV_BUF_LEN];
+extern uint8_t send_buffer[SEND_BUF_LEN];
+
+extern char *optarg;
+extern int optind;
+
+extern const char const *version;
+extern const char const *progname;
+extern const char const *progdesc;
+
+extern struct arguments arguments;
+
+extern uint8_t debug;
+
+extern struct fb_config	config;
+
+#define INFO(...) if (arguments.verbosity >= V_INFO) \
+	fprintf(stderr, __VA_ARGS__)
+#define DEBUG(...) if (arguments.verbosity >= V_DEBUG) \
+	fprintf(stderr, __VA_ARGS__)
+#define TRACE(...) if (arguments.verbosity >= V_TRACE) \
+	fprintf(stderr, __VA_ARGS__)
+
+extern const char *BROKEN_SOFTWARE_NOTIFICATION;
+
+int mac_ntop(char *addr, char *dst, size_t s);
+void dhcpd_error(int _exit, int _errno, const char *fmt, ...);
 
 #endif

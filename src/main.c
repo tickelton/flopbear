@@ -5,89 +5,7 @@
  */
 
 #define _BSD_SOURCE
-#include <err.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <ifaddrs.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <poll.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <linux/if.h>
 #include "flopbear.h"
-#include "dhcp.h"
-#include "config.h"
-
-#ifndef RECV_BUF_LEN
-#define RECV_BUF_LEN 4096
-#endif
-
-#ifndef SEND_BUF_LEN
-#define SEND_BUF_LEN 4096
-#endif
-
-#define MAC_ADDRSTRLEN 18
-
-struct sockaddr_in server_id;
-struct sockaddr_in broadcast = {
-	.sin_family = AF_INET,
-	.sin_addr = {INADDR_BROADCAST},
-};
-
-uint8_t recv_buffer[RECV_BUF_LEN];
-uint8_t send_buffer[SEND_BUF_LEN];
-
-extern char *optarg;
-extern int optind;
-
-static const char const *version = "0.1.0";
-static const char const *progname = "flopbear";
-static const char const *progdesc =
-"A configuration-less DHCP server.";
-
-static struct arguments arguments;
-
-uint8_t debug = 0;
-
-struct fb_config	config;
-
-#define INFO(...) if (arguments.verbosity >= V_INFO) \
-	fprintf(stderr, __VA_ARGS__)
-#define DEBUG(...) if (arguments.verbosity >= V_DEBUG) \
-	fprintf(stderr, __VA_ARGS__)
-#define TRACE(...) if (arguments.verbosity >= V_TRACE) \
-	fprintf(stderr, __VA_ARGS__)
-
-static const char BROKEN_SOFTWARE_NOTIFICATION[] = 
-"#################################### ALERT ####################################\n"
-"  BROKEN SOFTWARE NOTIFICATION - SOMETHING SENDS INVALID DHCP MESSAGES IN YOUR\n"
-"                                    NETWORK\n";
-
-static inline void dhcpd_error(int _exit, int _errno, const char *fmt, ...)
-{
-
-	va_list ap;
-	va_start(ap, fmt);
-
-	if (_errno != 0)
-		fprintf(stderr, "%s: ", strerror(_errno));
-
-	vfprintf(stderr, fmt, ap);
-	fputc('\n', stderr);
-
-	if (_exit > 0)
-		exit(_exit);
-}
-
-static int mac_ntop(char *addr, char *dst, size_t s)
-{
-	return snprintf(dst, s,
-		"%02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX", 
-		addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
-}
 
 void dhcp_msg_dump(FILE *stream, struct dhcp_msg *msg)
 {
@@ -565,7 +483,7 @@ req_cb(int sock)
 			break;
 
 		default:
-			fprintf(stderr, BROKEN_SOFTWARE_NOTIFICATION);
+			fprintf(stderr, "%s", BROKEN_SOFTWARE_NOTIFICATION);
 			msg_debug(&msg, 0);
 			break;
 	}
