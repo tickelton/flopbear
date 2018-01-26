@@ -4,7 +4,7 @@
 void test_mac_ntop_valid_address(void)
 {
 	char dst[18];
-	char src[6];
+	uint8_t src[6];
 
 	memset(dst, 0, sizeof(dst));
 	src[0] = 0x00;
@@ -14,7 +14,7 @@ void test_mac_ntop_valid_address(void)
 	src[4] = 0xEF;
 	src[5] = 0x01;
 
-	mac_ntop(src, dst, sizeof(dst));
+	mac_ntop((char *)src, dst, sizeof(dst));
 	TEST_ASSERT_EQUAL_STRING("00:DE:AD:BE:EF:01", dst);
 }
 
