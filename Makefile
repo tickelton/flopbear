@@ -13,9 +13,9 @@ OBJS = $(patsubst $(SRCDIR)/%.c,$(BUILDDIR)/%.o,$(SRCS))
 BIN = $(BUILDDIR)/flopbear
 VARIANTS = debug release
 
-include test/test.mk
-
 all: release
+
+include test/test.mk
 
 debug: CFLAGS = $(CFLAGS_DEBUG)
 release: CFLAGS = $(CFLAGS_RELEASE)
