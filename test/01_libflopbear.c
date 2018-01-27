@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2018 tick <tickelton@gmail.com>
+ *
+ * SPDX-License-Identifier:	ISC
+ */
+
 #include "unity.h"
 #include "flopbear.h"
 
