@@ -1,7 +1,5 @@
 # flopbear
 
-**NOTE: This README does not describe the current state of the project but the desired state for a first release. If you are reading this, flopbear is probably not functional, yet.**
-
 flopbear is (going to be) a configuration-less, single binary, non RFC compliant (for now) DHCP server for use in development and testing.
 
 It's main use cases are situations where a temporary DHCP server is needed quickly. Ease of use is the primary objective, so that no time has to be spent installing and configuring software.
@@ -23,7 +21,6 @@ $ ./flopbear eth0
 
 ### Dependencies
 
-**TODO: fill in as they emerge.**
 * GNU Make
 
 ### Compiling
