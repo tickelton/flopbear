@@ -1,6 +1,6 @@
 # flopbear
 
-flopbear is (going to be) a configuration-less, single binary, non RFC compliant (for now) DHCP server for use in development and testing.
+flopbear is a configuration-less, single binary, non RFC compliant (for now) DHCP server for use in development and testing.
 
 It's main use cases are situations where a temporary DHCP server is needed quickly. Ease of use is the primary objective, so that no time has to be spent installing and configuring software.
 
