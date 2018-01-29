@@ -14,8 +14,6 @@
 
 #include <netinet/in.h>
 
-#include "array.h"
-
 #ifndef DHCPD_DHCP_H_
 #define DHCPD_DHCP_H_
 
@@ -91,6 +89,20 @@
 		.len = *DHCP_OPT_F_LEN(m),\
 		.data = ((*DHCP_OPT_F_LEN(m)) > 0 ? DHCP_OPT_F_DATA(m) : NULL)\
 	}
+
+#define ARRAY_COPY(dst, src, len) { \
+		struct { \
+			uint8_t _[len]; \
+		} *_src, *_dst; \
+		_src = (void*)src; \
+		_dst = (void*)dst; \
+		*_dst = *_src; \
+	}
+#define ARRAY_LEN(a) ((sizeof (a)) / (sizeof *(a)))
+
+#define ARRAY_SAFE_COPY(dst, src) (ARRAY_COPY(dst, src, \
+	(ARRAY_LEN(dst) > ARRAY_LEN(src) ? ARRAY_LEN(src) : ARRAY_LEN(dst))))
+
 
 enum dhcp_opt_type
 {

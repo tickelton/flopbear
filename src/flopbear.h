@@ -23,7 +23,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include "dhcp.h"
-#include "config.h"
 
 #ifndef RECV_BUF_LEN
 #define RECV_BUF_LEN 4096
