@@ -70,14 +70,7 @@ union fb_in_addr {
 	uint32_t addr;
 };
 
-extern struct sockaddr_in server_id;
 extern struct sockaddr_in broadcast;
-
-extern uint8_t recv_buffer[RECV_BUF_LEN];
-extern uint8_t send_buffer[SEND_BUF_LEN];
-
-extern char *optarg;
-extern int optind;
 
 extern const char const *version;
 extern const char const *progname;
@@ -99,6 +92,11 @@ extern struct fb_config	config;
 extern const char *BROKEN_SOFTWARE_NOTIFICATION;
 
 int mac_ntop(char *addr, char *dst, size_t s);
-void dhcpd_error(int _exit, int _errno, const char *fmt, ...);
+void dhcp_msg_dump(FILE *stream, struct dhcp_msg *msg);
+void msg_debug(struct dhcp_msg *msg, int dir);
+void get_config(struct fb_config *config, const struct arguments const *args);
+int do_listen(struct fb_config *config);
+uint8_t *dhcp_opt_add_lease(uint8_t *options, size_t *_send_len, struct dhcp_lease *lease);
+void req_cb(int sock);
 
 #endif
