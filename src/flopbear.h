@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018 tick <tickelton@gmail.com>
- * 
+ *
  * SPDX-License-Identifier:	ISC
  */
 
@@ -17,7 +17,6 @@
 #include <poll.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <linux/if.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -79,7 +78,7 @@ extern struct arguments arguments;
 
 extern uint8_t debug;
 
-extern struct fb_config	config;
+extern struct fb_config config;
 
 #define INFO(...) if (arguments.verbosity >= V_INFO) \
 	fprintf(stderr, __VA_ARGS__)
@@ -90,12 +89,12 @@ extern struct fb_config	config;
 
 extern const char *BROKEN_SOFTWARE_NOTIFICATION;
 
-int mac_ntop(char *addr, char *dst, size_t s);
-void dhcp_msg_dump(FILE *stream, struct dhcp_msg *msg);
-void msg_debug(struct dhcp_msg *msg, int dir);
-void get_config(struct fb_config *config, const struct arguments const *args);
-int do_listen(struct fb_config *config);
-uint8_t *dhcp_opt_add_lease(uint8_t *options, size_t *_send_len, struct dhcp_lease *lease);
-void req_cb(int sock);
+int 	mac_ntop(char *addr, char *dst, size_t s);
+void 	dhcp_msg_dump(FILE * stream, struct dhcp_msg * msg);
+void 	msg_debug(struct dhcp_msg * msg, int dir);
+void 	get_config(struct fb_config * config, const struct arguments const * args);
+int 	do_listen(struct fb_config * config);
+uint8_t *dhcp_opt_add_lease(uint8_t * options, size_t * _send_len, struct dhcp_lease * lease);
+void 	req_cb(int sock);
 
 #endif

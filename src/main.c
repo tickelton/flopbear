@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018 tick <tickelton@gmail.com>
- * 
+ *
  * SPDX-License-Identifier:	ISC
  */
 
@@ -56,8 +56,8 @@ parse_opts(int *argc, char **argv)
 int
 main(int argc, char **argv)
 {
-	int sock = -1;
-	int pollret;
+	int 	sock = -1;
+	int 	pollret;
 	struct pollfd fds[1];
 
 	parse_opts(&argc, argv);
@@ -78,22 +78,16 @@ main(int argc, char **argv)
 		if (sock < 0) {
 			sock = do_listen(&config);
 		}
-		if (sock < 0)
-			err(1, "do_listen");
-
-
 		fcntl(sock, F_SETFD, FD_CLOEXEC);
 		fds[0].fd = sock;
 		fds[0].events = POLLIN;
 
 		pollret = poll(fds, 1, -1);
-		if(pollret < 1) {
+		if (pollret < 1) {
 			warn("poll");
 			continue;
 		}
-
 		req_cb(sock);
-
 	}
 
 	return 0;
