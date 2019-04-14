@@ -6,7 +6,9 @@ It's main use cases are situations where a temporary DHCP server is needed quick
 
 An example scenario is embedded development for an evaluation board that can only be accessed via Network, is configured to use DHCP by default and can not be connected to an existing network but has to be connected to a development machine directly (e.g. for security reasons).
 
-For now flopbear is targeting only Linux and OpenBSD. Patches to support other platforms are very welcome.
+For now flopbear is targeting only Linux and OpenBSD. Patches to support other platforms are very welcome.  
+If you are looking for a similar (but much better ;)) project targeting Windows have a look at [David Anson's DHCPLite](https://github.com/DavidAnson/DHCPLite).
+
 
 ## Getting started
 
